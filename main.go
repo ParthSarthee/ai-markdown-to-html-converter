@@ -10,7 +10,7 @@ import (
 )
 
 func main(){
-	fmt.Println("Main function started")
+	fmt.Println("Server started on :8080")
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /", HandleHome)
@@ -22,8 +22,7 @@ func main(){
 		fmt.Println("Error starting server:", err)
 		return
 	}
-	fmt.Println("Server started on :8080")
-	defer fmt.Println("Server stopped")
+	defer fmt.Println("Server Stopped.")
 }
 
 func HandleHome(w http.ResponseWriter, r *http.Request) {
