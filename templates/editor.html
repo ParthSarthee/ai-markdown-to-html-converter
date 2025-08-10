@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Markdown to HTML Converter</title>
+		<script src="https://cdn.tailwindcss.com"></script>
+		<style>
+			.markdown-input:focus {
+				outline: none;
+				border-color: #3b82f6;
+				box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+			}
+		</style>
+	</head>
+	<body class="bg-gray-50 min-h-screen">
+		<!-- Header -->
+		<header class="bg-white shadow-sm border-b">
+			<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+				<div
+					class="flex flex-col sm:flex-row justify-between items-start sm:items-center py-4 gap-3"
+				>
+					<h1 class="text-xl sm:text-2xl font-bold text-gray-900">
+						Markdown to HTML Converter
+					</h1>
+				</div>
+			</div>
+		</header>
+
+		<!-- Main Content -->
+		<main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
+			<div class="flex flex-col lg:grid lg:grid-cols-2 gap-4 sm:gap-6">
+				<!-- Markdown Input Section -->
+				<div
+					class="bg-white rounded-lg shadow-sm border flex flex-col h-[45vh] lg:h-[calc(100vh-200px)]"
+				>
+					<div
+						class="border-b px-4 py-3 flex justify-between items-center flex-shrink-0"
+					>
+						<h2 class="text-base sm:text-lg font-semibold text-gray-800">
+							Markdown Input
+						</h2>
+						<button
+							id="convertBtn"
+							class="bg-blue-600 hover:bg-blue-700 text-white px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg font-medium transition-colors text-xs sm:text-sm"
+						>
+							Convert
+						</button>
+					</div>
+					<div class="p-4 flex-1 min-h-0">
+						<textarea
+							id="markdownInput"
+							placeholder="Enter your markdown here..."
+							class="w-full h-full resize-none border border-gray-200 rounded-lg p-3 sm:p-4 font-mono text-xs sm:text-sm markdown-input focus:border-blue-500 transition-colors"
+						>
+# Welcome to Markdown Converter
+
+This is a **sample** markdown text. You can:
+
+- Write your markdown here
+- See the converted HTML on the right
+- Use all standard markdown features
+
+## Features
+
+- *Italic text*
+- **Bold text**
+- `Inline code`
+- [Links](https://example.com)
+
+```javascript
+// Code blocks
+console.log("Hello World!");
+```
+
+> Blockquotes are also supported
+
+1. Numbered lists
+2. Work perfectly
+3. As expected</textarea
+						>
+					</div>
+				</div>
+
+				<!-- HTML Output Section -->
+				<div
+					class="bg-white rounded-lg shadow-sm border flex flex-col h-[45vh] lg:h-[calc(100vh-200px)]"
+				>
+					<div
+						class="border-b px-4 py-3 flex justify-between items-center flex-shrink-0"
+					>
+						<h2 class="text-base sm:text-lg font-semibold text-gray-800">
+							HTML Output
+						</h2>
+						<div class="flex gap-2">
+							<button
+								id="copyBtn"
+								class="text-blue-600 hover:text-blue-700 text-xs sm:text-sm font-medium transition-colors disabled:text-gray-400 disabled:cursor-not-allowed"
+								disabled
+							>
+								Copy HTML
+							</button>
+							<button
+								id="previewBtn"
+								class="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white px-3 py-1 rounded text-xs sm:text-sm font-medium transition-colors"
+								disabled
+							>
+								Preview
+							</button>
+						</div>
+					</div>
+					<div class="p-4 flex-1 min-h-0">
+						<div
+							id="htmlOutput"
+							class="w-full h-full border border-gray-200 rounded-lg p-3 sm:p-4 bg-gray-50 font-mono text-xs sm:text-sm overflow-auto"
+						>
+							<div class="text-gray-500 text-center mt-8 sm:mt-20">
+								Click "Convert" to see the HTML output here...
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<!-- Loading Indicator -->
+			<div
+				id="loadingIndicator"
+				class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+			>
+				<div
+					class="bg-white rounded-lg p-4 sm:p-6 shadow-xl max-w-sm w-full mx-4"
+				>
+					<div class="flex items-center space-x-3">
+						<div
+							class="animate-spin rounded-full h-5 w-5 sm:h-6 sm:w-6 border-b-2 border-blue-600"
+						></div>
+						<span class="text-gray-700 text-sm sm:text-base"
+							>Converting markdown...</span
+						>
+					</div>
+				</div>
+			</div>
+		</main>
+
+		<script>
+			const markdownInput = document.getElementById("markdownInput");
+			const htmlOutput = document.getElementById("htmlOutput");
+			const convertBtn = document.getElementById("convertBtn");
+			const previewBtn = document.getElementById("previewBtn");
+			const copyBtn = document.getElementById("copyBtn");
+			const loadingIndicator = document.getElementById("loadingIndicator");
+
+			// Convert markdown to HTML
+			async function convertMarkdown() {
+				const markdown = markdownInput.value;
+
+				if (!markdown.trim()) {
+					htmlOutput.innerHTML =
+						'<div class="text-gray-500 text-center mt-8 sm:mt-20 text-sm sm:text-base">Please enter some markdown to convert...</div>';
+					updateButtonStates(false);
+					return;
+				}
+
+				// Show loading indicator
+				loadingIndicator.classList.remove("hidden");
+				convertBtn.disabled = true;
+				convertBtn.textContent = "Converting...";
+				updateButtonStates(false);
+
+				try {
+					const response = await fetch("/api/convert", {
+						method: "POST",
+						headers: {
+							"Content-Type": "application/json",
+						},
+						body: JSON.stringify({ markdown: markdown }),
+					});
+
+					if (!response.ok) {
+						throw new Error("Conversion failed");
+					}
+
+					const result = await response.json();
+
+					// Display the HTML with syntax highlighting
+					htmlOutput.innerHTML = `<pre class="whitespace-pre-wrap text-xs sm:text-sm break-words"><code>${escapeHtml(
+						result.html
+					)}</code></pre>`;
+
+					// Enable buttons since we have content
+					updateButtonStates(true);
+				} catch (error) {
+					console.error("Error:", error);
+					htmlOutput.innerHTML =
+						'<div class="text-red-500 text-center mt-8 sm:mt-20 text-sm sm:text-base">Error converting markdown. Please try again.</div>';
+					updateButtonStates(false);
+				} finally {
+					// Hide loading indicator
+					loadingIndicator.classList.add("hidden");
+					convertBtn.disabled = false;
+					convertBtn.textContent = "Convert";
+				}
+			}
+
+			// Update button states based on whether we have HTML content
+			function updateButtonStates(hasContent) {
+				copyBtn.disabled = !hasContent;
+				previewBtn.disabled = !hasContent;
+
+				if (hasContent) {
+					copyBtn.classList.remove("text-gray-400");
+					copyBtn.classList.add("text-blue-600");
+				} else {
+					copyBtn.classList.remove("text-blue-600");
+					copyBtn.classList.add("text-gray-400");
+				}
+			}
+
+			// Copy HTML to clipboard
+			async function copyToClipboard() {
+				if (copyBtn.disabled) return;
+
+				const htmlText = htmlOutput.textContent;
+
+				if (
+					!htmlText ||
+					htmlText.includes('Click "Convert"') ||
+					htmlText.includes("Error converting")
+				) {
+					return;
+				}
+
+				try {
+					await navigator.clipboard.writeText(htmlText);
+
+					// Show feedback
+					const originalText = copyBtn.textContent;
+					copyBtn.textContent = "Copied!";
+					copyBtn.classList.remove("text-blue-600");
+					copyBtn.classList.add("text-green-600");
+
+					setTimeout(() => {
+						copyBtn.textContent = originalText;
+						copyBtn.classList.remove("text-green-600");
+						copyBtn.classList.add("text-blue-600");
+					}, 2000);
+				} catch (error) {
+					console.error("Failed to copy:", error);
+				}
+			}
+
+			// Open preview in new tab
+			async function openPreview() {
+				if (previewBtn.disabled) return;
+
+				const markdown = markdownInput.value;
+
+				if (!markdown.trim()) {
+					alert("Please enter some markdown content first.");
+					return;
+				}
+
+				// First convert the markdown
+				try {
+					const response = await fetch("/api/convert", {
+						method: "POST",
+						headers: {
+							"Content-Type": "application/json",
+						},
+						body: JSON.stringify({ markdown: markdown }),
+					});
+
+					if (!response.ok) {
+						throw new Error("Conversion failed");
+					}
+
+					const result = await response.json();
+
+					// Create URL with query parameters for preview
+					const previewUrl = `/preview?html=${encodeURIComponent(
+						result.html
+					)}&markdown=${encodeURIComponent(markdown)}`;
+
+					// Open in new tab
+					window.open(previewUrl, "_blank");
+				} catch (error) {
+					console.error("Error:", error);
+					alert("Error converting markdown for preview. Please try again.");
+				}
+			}
+
+			// Escape HTML for display
+			function escapeHtml(text) {
+				const div = document.createElement("div");
+				div.textContent = text;
+				return div.innerHTML;
+			}
+
+			// Event listeners
+			convertBtn.addEventListener("click", convertMarkdown);
+			previewBtn.addEventListener("click", openPreview);
+			copyBtn.addEventListener("click", copyToClipboard);
+
+			// Convert on Ctrl+Enter (desktop) or touch double-tap (mobile)
+			markdownInput.addEventListener("keydown", (e) => {
+				if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+					e.preventDefault();
+					convertMarkdown();
+				}
+			});
+
+			// Auto-convert on mobile when user stops typing for 2 seconds (optional)
+			let autoConvertTimer;
+			const isMobile = window.innerWidth < 768;
+
+			if (isMobile) {
+				markdownInput.addEventListener("input", function () {
+					clearTimeout(autoConvertTimer);
+					// Clear output and disable buttons while typing
+					if (markdownInput.value.trim() === "") {
+						htmlOutput.innerHTML =
+							'<div class="text-gray-500 text-center mt-8 sm:mt-20 text-sm sm:text-base">Click "Convert" to see the HTML output here...</div>';
+						updateButtonStates(false);
+					}
+
+					autoConvertTimer = setTimeout(() => {
+						if (markdownInput.value.trim()) {
+							convertMarkdown();
+						}
+					}, 2000);
+				});
+			} else {
+				// On desktop, update button states when input changes
+				markdownInput.addEventListener("input", function () {
+					if (markdownInput.value.trim() === "") {
+						htmlOutput.innerHTML =
+							'<div class="text-gray-500 text-center mt-8 sm:mt-20 text-sm sm:text-base">Click "Convert" to see the HTML output here...</div>';
+						updateButtonStates(false);
+					}
+				});
+			}
+
+			// Initialize button states on page load
+			updateButtonStates(false);
+
+			// Handle orientation changes on mobile
+			window.addEventListener("orientationchange", function () {
+				setTimeout(() => {
+					// Trigger a layout recalculation
+					markdownInput.style.height = "auto";
+					markdownInput.style.height = markdownInput.scrollHeight + "px";
+				}, 100);
+			});
+		</script>
+	</body>
+</html>
